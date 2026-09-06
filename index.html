@@ -1,0 +1,128 @@
+﻿<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Panda Runner 🐼 | Панда Раннер</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐼</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Comfortaa:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="game-wrapper">
+    <header class="game-header">
+      <div class="title-container">
+        <h1>🐼 PANDA RUNNER</h1>
+        <p class="subtitle">Хром-динозавр, але з милою пандочкою у бамбуковому лісі!</p>
+      </div>
+      
+      <div class="hud-bar">
+        <div class="score-board">
+          <span class="hi-score" id="hiScoreDisplay">HI 00000</span>
+          <span class="current-score" id="scoreDisplay">00000</span>
+        </div>
+        <div class="hud-buttons">
+          <button id="soundBtn" class="hud-btn" title="Увімкнути/Вимкнути звук (M)" aria-label="Звук">
+            <span id="soundIcon">🔊</span>
+          </button>
+          <button id="pauseBtn" class="hud-btn" title="Пауза (P)" aria-label="Пауза">
+            <span id="pauseIcon">⏸️</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="canvas-container" id="canvasContainer">
+      <canvas id="gameCanvas" width="900" height="320"></canvas>
+
+      <!-- Start Overlay -->
+      <div id="startOverlay" class="overlay active">
+        <div class="overlay-card">
+          <div class="panda-logo">🐼🎋</div>
+          <h2>ПАНДА РАННЕР</h2>
+          <p class="start-hint">Натисніть <kbd>ПРОБІЛ</kbd> або торкніться екрана, щоб почати бігти!</p>
+          <div class="controls-legend">
+            <div class="legend-item">
+              <span class="key-combo"><kbd>Пробіл</kbd> / <kbd>↑</kbd> / <kbd>W</kbd></span>
+              <span>Стрибок (затисніть для вищого стрибка)</span>
+            </div>
+            <div class="legend-item">
+              <span class="key-combo"><kbd>↓</kbd> / <kbd>S</kbd></span>
+              <span>Присісти / Перекат (швидкий спуск у повітрі)</span>
+            </div>
+            <div class="legend-item">
+              <span class="key-combo">🎋 Золотий бамбук</span>
+              <span>+100 додаткових балів!</span>
+            </div>
+          </div>
+          <button id="startGameBtn" class="action-btn">ПОЧАТИ ГРУ</button>
+        </div>
+      </div>
+
+      <!-- Game Over Overlay -->
+      <div id="gameOverOverlay" class="overlay">
+        <div class="overlay-card game-over-card">
+          <div class="game-over-icon">💥🐼</div>
+          <h2>ГРА ЗАКІНЧЕНА</h2>
+          <div class="result-stats">
+            <div class="stat-box">
+              <span class="stat-label">ВАШ РАХУНОК</span>
+              <span id="finalScore" class="stat-value">0</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-label">РЕКОРД</span>
+              <span id="finalHiScore" class="stat-value">0</span>
+            </div>
+          </div>
+          <p class="new-record-alert" id="newRecordAlert">🎉 НОВИЙ РЕКОРД! 🎉</p>
+          <button id="restartBtn" class="action-btn restart-btn">
+            <span>🔄 ГРАТИ ЗНОВУ</span>
+            <small>(або натисніть <kbd>Пробіл</kbd>)</small>
+          </button>
+        </div>
+      </div>
+
+      <!-- Pause Overlay -->
+      <div id="pauseOverlay" class="overlay">
+        <div class="overlay-card">
+          <h2>⏸️ ПАУЗА</h2>
+          <p>Натисніть <kbd>P</kbd> або кнопку нижче, щоб продовжити</p>
+          <button id="resumeBtn" class="action-btn">ПРОДОВЖИТИ</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mobile Touch Controls -->
+    <div class="touch-controls" id="touchControls">
+      <button id="touchDuckBtn" class="touch-btn duck-btn" aria-label="Присісти">
+        <span>🔻 ПРИСІСТИ</span>
+      </button>
+      <button id="touchJumpBtn" class="touch-btn jump-btn" aria-label="Стрибок">
+        <span>🔺 СТРИБОК</span>
+      </button>
+    </div>
+
+    <!-- Footer Controls Bar / Shortcuts -->
+    <footer class="game-footer">
+      <div class="hotkey-hints">
+        <span>Керування: <kbd>Space</kbd>/<kbd>↑</kbd> Стрибок</span>
+        <span>•</span>
+        <span><kbd>↓</kbd> Присісти</span>
+        <span>•</span>
+        <span><kbd>P</kbd> Пауза</span>
+        <span>•</span>
+        <span><kbd>M</kbd> Звук</span>
+        <span>•</span>
+        <span><kbd>R</kbd> Рестарт</span>
+      </div>
+      <div class="author-credits">
+        Зроблено з любов'ю до панд та олдскульних ігор 🎋
+      </div>
+    </footer>
+  </div>
+
+  <script src="game.js"></script>
+</body>
+</html>
