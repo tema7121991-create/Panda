@@ -29,14 +29,58 @@
   class SoundController {
     constructor() {
       this.ctx = null;
+      this.bgmGain = null;
+      this.noiseBuffer = null;
       this.isMuted = localStorage.getItem('panda_runner_muted') === 'true';
+
+      this.bgmPlaying = false;
+      this.bgmStep = 0;
+      this.bgmNextNoteTime = 0;
+
+      this.initBgmPatterns();
       this.initAudio();
+    }
+
+    initBgmPatterns() {
+      // Oriental Pentatonic Scale (A Minor / Gong-Yu mode)
+      const A4 = 440.00, C5 = 523.25, D5 = 587.33, E5 = 659.25, G5 = 783.99, A5 = 880.00;
+      const A2 = 110.00, C3 = 130.81, D3 = 146.83, E3 = 164.81;
+      const _ = 0;
+
+      // 32-step melody pattern
+      this.bgmMelody = [
+        A4, _, C5, D5, E5, _, D5, C5,
+        D5, E5, G5, E5, D5, C5, D5, _,
+        E5, G5, A5, G5, E5, D5, C5, D5,
+        E5, D5, C5, A4, A4, _, A4, _
+      ];
+
+      // 32-step bass line
+      this.bgmBass = [
+        A2, _, _, _, A2, _, _, _,
+        D3, _, _, _, D3, _, _, _,
+        C3, _, _, _, C3, _, _, _,
+        E3, _, _, _, A2, _, A2, _
+      ];
     }
 
     initAudio() {
       if (!this.ctx && (window.AudioContext || window.webkitAudioContext)) {
         const AudioCtx = window.AudioContext || window.webkitAudioContext;
         this.ctx = new AudioCtx();
+      }
+      if (this.ctx && !this.bgmGain) {
+        this.bgmGain = this.ctx.createGain();
+        this.bgmGain.gain.setValueAtTime(this.isMuted ? 0 : 0.65, this.ctx.currentTime);
+        this.bgmGain.connect(this.ctx.destination);
+
+        // Precompute noise buffer for 8-bit hi-hat percussion
+        const bufferSize = Math.floor(this.ctx.sampleRate * 0.04);
+        this.noiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const data = this.noiseBuffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+          data[i] = Math.random() * 2 - 1;
+        }
       }
     }
 
@@ -49,6 +93,9 @@
     toggleMute() {
       this.isMuted = !this.isMuted;
       localStorage.setItem('panda_runner_muted', this.isMuted);
+      if (this.bgmGain && this.ctx) {
+        this.bgmGain.gain.setValueAtTime(this.isMuted ? 0 : 0.65, this.ctx.currentTime);
+      }
       return this.isMuted;
     }
 
@@ -277,6 +324,114 @@
 
       osc.start(now);
       osc.stop(now + 0.13);
+    }
+
+    startBgm() {
+      this.initAudio();
+      this.resume();
+      this.bgmPlaying = true;
+      this.bgmStep = 0;
+      if (this.ctx) {
+        this.bgmNextNoteTime = this.ctx.currentTime + 0.05;
+      }
+    }
+
+    pauseBgm() {
+      this.bgmPlaying = false;
+    }
+
+    resumeBgm() {
+      if (!this.ctx) return;
+      this.resume();
+      this.bgmPlaying = true;
+      this.bgmNextNoteTime = this.ctx.currentTime + 0.05;
+    }
+
+    stopBgm() {
+      this.bgmPlaying = false;
+      this.bgmStep = 0;
+    }
+
+    updateBgm(speed) {
+      if (!this.bgmPlaying || !this.ctx) return;
+      this.resume();
+
+      // Dynamic speed scaling: tempo accelerates proportionally as panda runs faster
+      const currentSpeed = typeof speed === 'number' ? speed : 6.5;
+      const tempoMultiplier = Math.min(1.85, Math.max(1.0, currentSpeed / 6.5));
+      const stepDuration = 0.125 / tempoMultiplier;
+
+      const lookahead = 0.12;
+      while (this.bgmNextNoteTime < this.ctx.currentTime + lookahead) {
+        this.scheduleBgmStep(this.bgmStep, this.bgmNextNoteTime, stepDuration);
+        this.bgmNextNoteTime += stepDuration;
+        this.bgmStep = (this.bgmStep + 1) % 32;
+      }
+    }
+
+    scheduleBgmStep(step, time, stepDuration) {
+      if (!this.ctx || !this.bgmGain) return;
+
+      // 1. Lead melody note (mellow 8-bit pulse)
+      const melFreq = this.bgmMelody[step];
+      if (melFreq) {
+        this.playBgmNote(melFreq, time, stepDuration * 0.85, 'square', 0.045);
+      }
+
+      // 2. Bass note (warm triangle)
+      const bassFreq = this.bgmBass[step];
+      if (bassFreq) {
+        this.playBgmNote(bassFreq, time, stepDuration * 1.6, 'triangle', 0.11);
+      }
+
+      // 3. 8-bit rhythmic hi-hat on every even step
+      if (step % 2 === 0) {
+        this.playBgmHat(time);
+      }
+    }
+
+    playBgmNote(freq, time, duration, type, volume) {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      const filter = this.ctx.createBiquadFilter();
+
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, time);
+
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(type === 'triangle' ? 700 : 2000, time);
+
+      gain.gain.setValueAtTime(0.001, time);
+      gain.gain.linearRampToValueAtTime(volume, time + 0.008);
+      gain.gain.exponentialRampToValueAtTime(0.0001, time + duration);
+
+      osc.connect(filter);
+      filter.connect(gain);
+      gain.connect(this.bgmGain);
+
+      osc.start(time);
+      osc.stop(time + duration + 0.01);
+    }
+
+    playBgmHat(time) {
+      if (!this.noiseBuffer) return;
+      const noise = this.ctx.createBufferSource();
+      noise.buffer = this.noiseBuffer;
+
+      const filter = this.ctx.createBiquadFilter();
+      filter.type = 'highpass';
+      filter.frequency.setValueAtTime(5500, time);
+
+      const gain = this.ctx.createGain();
+      gain.gain.setValueAtTime(0.018, time);
+      gain.gain.exponentialRampToValueAtTime(0.0001, time + 0.025);
+
+      noise.connect(filter);
+      filter.connect(gain);
+      gain.connect(this.bgmGain);
+
+      noise.start(time);
+      noise.stop(time + 0.03);
     }
   }
 
@@ -1824,10 +1979,12 @@
         this.state = 'PAUSED';
         this.pauseOverlay.classList.add('active');
         this.pauseIcon.textContent = '▶️';
+        this.sound.pauseBgm();
       } else if (this.state === 'PAUSED') {
         this.state = 'RUNNING';
         this.pauseOverlay.classList.remove('active');
         this.pauseIcon.textContent = '⏸️';
+        this.sound.resumeBgm();
         this.lastTime = performance.now();
         requestAnimationFrame(this.loop.bind(this));
       }
@@ -1839,6 +1996,7 @@
       this.gameOverOverlay.classList.remove('active');
       this.pauseOverlay.classList.remove('active');
       this.panda.jump(this.sound);
+      this.sound.startBgm();
       this.lastTime = performance.now();
       requestAnimationFrame(this.loop.bind(this));
     }
@@ -1863,6 +2021,7 @@
       this.state = 'GAMEOVER';
       this.panda.isHit = true;
       this.updateShieldBadge();
+      this.sound.stopBgm();
       this.sound.playHit();
 
       const finalVal = Math.floor(this.score);
@@ -1900,6 +2059,7 @@
 
     update(dt) {
       this.speed = Math.min(MAX_SPEED, INITIAL_SPEED + (this.score / 100) * 0.45);
+      this.sound.updateBgm(this.speed);
 
       this.distance += this.speed;
       this.score = this.distance / 10;
