@@ -1,4 +1,4 @@
-﻿:root {
+:root {
   --bg-primary: #121815;
   --bg-card: rgba(22, 33, 27, 0.92);
   --accent-green: #2ecc71;
@@ -69,6 +69,40 @@ body {
   display: flex;
   align-items: center;
   gap: 16px;
+}
+
+.shield-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(46, 204, 113, 0.2);
+  border: 1.5px solid var(--accent-green);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-family: var(--font-retro);
+  font-size: 0.75rem;
+  color: #7bed9f;
+  box-shadow: 0 0 12px rgba(46, 204, 113, 0.4);
+  animation: pulseShieldBadge 1.5s infinite ease-in-out;
+}
+
+.shield-badge-icon {
+  font-size: 0.95rem;
+}
+
+.shield-badge-text {
+  letter-spacing: 1px;
+}
+
+@keyframes pulseShieldBadge {
+  0%, 100% {
+    box-shadow: 0 0 8px rgba(46, 204, 113, 0.3);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 16px rgba(46, 204, 113, 0.7);
+    transform: scale(1.05);
+  }
 }
 
 .score-board {

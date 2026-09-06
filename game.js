@@ -200,6 +200,84 @@
       osc.start(now);
       osc.stop(now + 0.04);
     }
+
+    playShieldActivate() {
+      if (this.isMuted) return;
+      this.resume();
+      if (!this.ctx) return;
+
+      const now = this.ctx.currentTime;
+      // Resonant chime / crystal chord for shield activation
+      const freqs = [523.25, 659.25, 783.99, 1046.5];
+      freqs.forEach((freq, idx) => {
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        const t = now + idx * 0.04;
+
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq, t);
+        osc.frequency.exponentialRampToValueAtTime(freq * 1.45, t + 0.25);
+
+        gain.gain.setValueAtTime(0.14, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.start(t);
+        osc.stop(t + 0.36);
+      });
+    }
+
+    playShieldBreak() {
+      if (this.isMuted) return;
+      this.resume();
+      if (!this.ctx) return;
+
+      const now = this.ctx.currentTime;
+
+      // 1. Crack noise burst (bamboo snapping)
+      const bufferSize = Math.floor(this.ctx.sampleRate * 0.14);
+      const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.2));
+      }
+      const noise = this.ctx.createBufferSource();
+      noise.buffer = buffer;
+
+      const filter = this.ctx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.setValueAtTime(1400, now);
+      filter.Q.setValueAtTime(2.5, now);
+
+      const noiseGain = this.ctx.createGain();
+      noiseGain.gain.setValueAtTime(0.35, now);
+      noiseGain.gain.exponentialRampToValueAtTime(0.01, now + 0.14);
+
+      noise.connect(filter);
+      filter.connect(noiseGain);
+      noiseGain.connect(this.ctx.destination);
+
+      noise.start(now);
+      noise.stop(now + 0.14);
+
+      // 2. Woody snap tone (fast dropping pitch)
+      const osc = this.ctx.createOscillator();
+      const oscGain = this.ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(450, now);
+      osc.frequency.exponentialRampToValueAtTime(70, now + 0.12);
+
+      oscGain.gain.setValueAtTime(0.22, now);
+      oscGain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
+
+      osc.connect(oscGain);
+      oscGain.connect(this.ctx.destination);
+
+      osc.start(now);
+      osc.stop(now + 0.13);
+    }
   }
 
   // --- GAME CONSTANTS ---
@@ -237,6 +315,20 @@
       this.blinkTimer = Math.random() * 150 + 100;
       this.isBlinking = false;
       this.rollAngle = 0;
+
+      this.hasShield = false;
+      this.invulnerableTimer = 0;
+      this.shieldAnimTick = 0;
+    }
+
+    activateShield() {
+      this.hasShield = true;
+      this.shieldAnimTick = 0;
+    }
+
+    breakShield() {
+      this.hasShield = false;
+      this.invulnerableTimer = 1.0;
     }
 
     getHitbox() {
@@ -287,7 +379,22 @@
       this.height = this.isDucking ? this.duckHeight : this.standHeight;
     }
 
-    update(particleSystem) {
+    update(dt, particleSystem) {
+      let particleSys = particleSystem;
+      let deltaTime = dt;
+      if (typeof dt !== 'number') {
+        particleSys = dt;
+        deltaTime = 0.016;
+      }
+
+      if (this.invulnerableTimer > 0) {
+        this.invulnerableTimer = Math.max(0, this.invulnerableTimer - deltaTime);
+      }
+
+      if (this.hasShield) {
+        this.shieldAnimTick++;
+      }
+
       if (this.isHit) {
         if (!this.isGrounded) {
           this.vy += GRAVITY;
@@ -309,13 +416,13 @@
           this.y = GROUND_Y;
           this.vy = 0;
           this.isGrounded = true;
-          particleSystem.createDust(this.x + this.width / 2, GROUND_Y, 5);
+          if (particleSys) particleSys.createDust(this.x + this.width / 2, GROUND_Y, 5);
         }
       }
 
       this.animTick++;
-      if (this.isGrounded && this.animTick % 7 === 0) {
-        particleSystem.createDust(this.x + 4, GROUND_Y - 2, 1);
+      if (this.isGrounded && this.animTick % 7 === 0 && particleSys) {
+        particleSys.createDust(this.x + 4, GROUND_Y - 2, 1);
       }
 
       this.blinkTimer--;
@@ -330,6 +437,12 @@
 
     draw(ctx) {
       ctx.save();
+
+      // Invulnerability flicker
+      if (this.invulnerableTimer > 0 && Math.floor(this.animTick / 3) % 2 === 0) {
+        ctx.globalAlpha = 0.45;
+      }
+
       ctx.translate(this.x, this.y);
 
       if (this.isHit) {
@@ -340,6 +453,62 @@
         this.drawJumping(ctx);
       } else {
         this.drawRunning(ctx);
+      }
+
+      ctx.restore();
+
+      // Pulsing bamboo shield
+      if (this.hasShield && !this.isHit) {
+        this.drawShield(ctx);
+      }
+    }
+
+    drawShield(ctx) {
+      ctx.save();
+      const cx = this.isDucking ? this.x + 28 : this.x + 22;
+      const cy = this.isDucking ? this.y - 14 : this.y - 26;
+      const pulse = Math.sin(this.shieldAnimTick * 0.12) * 3;
+      const baseR = this.isDucking ? 32 : 36;
+      const r = baseR + pulse;
+
+      // Outer protective glowing sphere
+      ctx.save();
+      ctx.shadowColor = '#2ecc71';
+      ctx.shadowBlur = 15;
+      ctx.strokeStyle = 'rgba(46, 204, 113, 0.85)';
+      ctx.lineWidth = 2.5;
+      ctx.fillStyle = 'rgba(46, 204, 113, 0.2)';
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+
+      // Rotating energy arcs
+      const rot = (this.shieldAnimTick * 0.04) % (Math.PI * 2);
+      ctx.strokeStyle = 'rgba(168, 230, 207, 0.85)';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r - 1, rot, rot + 0.9);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(cx, cy, r - 1, rot + Math.PI, rot + Math.PI + 0.9);
+      ctx.stroke();
+
+      // Orbiting decorative bamboo leaves
+      for (let i = 0; i < 3; i++) {
+        const leafAngle = rot * 1.4 + (i * Math.PI * 2) / 3;
+        const lx = cx + Math.cos(leafAngle) * (r + 4);
+        const ly = cy + Math.sin(leafAngle) * (r + 4);
+        ctx.save();
+        ctx.translate(lx, ly);
+        ctx.rotate(leafAngle + Math.PI / 2);
+        ctx.fillStyle = '#27ae60';
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 6, 2.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
       }
 
       ctx.restore();
@@ -680,7 +849,7 @@
       this.distSinceLast = 0;
     }
 
-    update(speed, score, sound, panda, particleSystem, onBonusPickup) {
+    update(speed, score, sound, panda, particleSystem, onBonusPickup, onShieldPickup) {
       for (let i = this.obstacles.length - 1; i >= 0; i--) {
         const obs = this.obstacles[i];
         obs.x -= speed;
@@ -698,10 +867,18 @@
 
         if (!col.collected && this.checkPandaCollision(panda, col.hitbox(col.x, col.y))) {
           col.collected = true;
-          sound.playBonus();
-          particleSystem.createSparkles(col.x + 15, col.y - 10, 12);
-          particleSystem.createFloatingText('+100', col.x + 10, col.y - 20, '#f1c40f');
-          onBonusPickup(100);
+          if (col.type === 'shield') {
+            sound.playShieldActivate();
+            particleSystem.createSparkles(col.x + 14, col.y - 10, 16, '#2ecc71');
+            particleSystem.createFloatingText('🛡️ ЩИТ!', col.x + 10, col.y - 20, '#2ecc71');
+            panda.activateShield();
+            if (onShieldPickup) onShieldPickup();
+          } else {
+            sound.playBonus();
+            particleSystem.createSparkles(col.x + 15, col.y - 10, 12);
+            particleSystem.createFloatingText('+100', col.x + 10, col.y - 20, '#f1c40f');
+            onBonusPickup(100);
+          }
         }
 
         if (col.x < -60 || col.collected) {
@@ -717,8 +894,8 @@
         this.spawnObstacle(score);
         this.distSinceLast = 0;
 
-        if (Math.random() < 0.28) {
-          this.spawnCollectible();
+        if (Math.random() < 0.3) {
+          this.spawnCollectible(panda);
         }
       }
     }
@@ -791,16 +968,18 @@
       this.obstacles.push(obstacle);
     }
 
-    spawnCollectible() {
+    spawnCollectible(panda) {
       const hoverY = Math.random() < 0.5 ? GROUND_Y - 40 : GROUND_Y - 80;
+      const spawnShield = (!panda || !panda.hasShield) && Math.random() < 0.35;
       this.collectibles.push({
+        type: spawnShield ? 'shield' : 'bamboo',
         x: CANVAS_WIDTH + 140,
         y: hoverY,
-        width: 26,
+        width: 28,
         height: 32,
         collected: false,
         animTick: 0,
-        hitbox: (x, y) => ({ x: x, y: y - 28, width: 26, height: 30 })
+        hitbox: (x, y) => ({ x: x, y: y - 28, width: 28, height: 32 })
       });
     }
 
@@ -814,10 +993,20 @@
       );
     }
 
-    checkCollisions(panda) {
-      for (const obs of this.obstacles) {
+    checkCollisions(panda, onShieldBreak) {
+      if (panda.invulnerableTimer > 0) {
+        return false;
+      }
+
+      for (let i = this.obstacles.length - 1; i >= 0; i--) {
+        const obs = this.obstacles[i];
         const oBox = obs.hitbox(obs.x, obs.y);
         if (this.checkPandaCollision(panda, oBox)) {
+          if (panda.hasShield) {
+            this.obstacles.splice(i, 1);
+            if (onShieldBreak) onShieldBreak();
+            return false;
+          }
           return true;
         }
       }
@@ -826,7 +1015,11 @@
 
     draw(ctx) {
       for (const col of this.collectibles) {
-        this.drawCollectible(ctx, col);
+        if (col.type === 'shield') {
+          this.drawShieldCollectible(ctx, col);
+        } else {
+          this.drawCollectible(ctx, col);
+        }
       }
 
       for (const obs of this.obstacles) {
@@ -997,6 +1190,65 @@
       ctx.beginPath();
       ctx.ellipse(13, -28, 5, 2.5, -0.4, 0, Math.PI * 2);
       ctx.ellipse(15, -29, 5, 2.5, 0.4, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.restore();
+    }
+
+    drawShieldCollectible(ctx, col) {
+      ctx.save();
+      const floatY = Math.sin(col.animTick * 0.1) * 4;
+      const x = col.x;
+      const y = col.y + floatY;
+      ctx.translate(x, y);
+
+      ctx.shadowColor = 'rgba(46, 204, 113, 0.85)';
+      ctx.shadowBlur = 14;
+
+      // Outer Shield outline
+      ctx.fillStyle = '#27ae60';
+      ctx.strokeStyle = '#a8e6cf';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(14, -28);
+      ctx.lineTo(26, -22);
+      ctx.quadraticCurveTo(27, -4, 20, 8);
+      ctx.lineTo(14, 16);
+      ctx.lineTo(8, 8);
+      ctx.quadraticCurveTo(1, -4, 2, -22);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // Inner Shield facet
+      ctx.fillStyle = '#2ecc71';
+      ctx.beginPath();
+      ctx.moveTo(14, -24);
+      ctx.lineTo(23, -19);
+      ctx.quadraticCurveTo(24, -4, 18, 6);
+      ctx.lineTo(14, 12);
+      ctx.lineTo(10, 6);
+      ctx.quadraticCurveTo(4, -4, 5, -19);
+      ctx.closePath();
+      ctx.fill();
+
+      // Bamboo stem emblem in center
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.roundRect(12, -16, 4, 20, 2);
+      ctx.fill();
+
+      // Bamboo joints
+      ctx.fillStyle = '#1e8449';
+      ctx.fillRect(10, -12, 8, 2);
+      ctx.fillRect(10, -5, 8, 2);
+      ctx.fillRect(10, 2, 8, 2);
+
+      // Leaf accents
+      ctx.fillStyle = '#a8e6cf';
+      ctx.beginPath();
+      ctx.ellipse(8, -14, 5, 2, -0.5, 0, Math.PI * 2);
+      ctx.ellipse(20, -8, 5, 2, 0.5, 0, Math.PI * 2);
       ctx.fill();
 
       ctx.restore();
@@ -1259,7 +1511,7 @@
       }
     }
 
-    createSparkles(x, y, count) {
+    createSparkles(x, y, count, customColor) {
       for (let i = 0; i < count; i++) {
         const angle = Math.random() * Math.PI * 2;
         const speed = Math.random() * 3 + 1;
@@ -1270,11 +1522,34 @@
           vx: Math.cos(angle) * speed,
           vy: Math.sin(angle) * speed,
           size: Math.random() * 3.5 + 2,
-          color: Math.random() < 0.5 ? '#f1c40f' : '#2ecc71',
+          color: customColor || (Math.random() < 0.5 ? '#f1c40f' : '#2ecc71'),
           alpha: 1,
           decay: 0.03
         });
       }
+    }
+
+    createShieldBreak(x, y) {
+      const colors = ['#2ecc71', '#27ae60', '#a8e6cf', '#7bed9f'];
+      for (let i = 0; i < 22; i++) {
+        const angle = (Math.PI * 2 * i) / 22 + (Math.random() - 0.5) * 0.4;
+        const speed = Math.random() * 4.5 + 2.5;
+        this.particles.push({
+          type: 'splinter',
+          x: x,
+          y: y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed - 1.5,
+          rot: Math.random() * Math.PI * 2,
+          rotSpeed: (Math.random() - 0.5) * 0.35,
+          length: Math.random() * 10 + 6,
+          width: Math.random() * 2.5 + 1.5,
+          color: colors[Math.floor(Math.random() * colors.length)],
+          alpha: 1,
+          decay: 0.028
+        });
+      }
+      this.createSparkles(x, y, 14, '#2ecc71');
     }
 
     createFloatingText(text, x, y, color) {
@@ -1294,6 +1569,11 @@
         p.x += p.vx;
         p.y += p.vy;
         p.alpha -= p.decay;
+
+        if (p.type === 'splinter') {
+          p.rot += p.rotSpeed;
+          p.vy += 0.12;
+        }
 
         if (p.alpha <= 0) {
           this.particles.splice(i, 1);
@@ -1326,6 +1606,15 @@
           ctx.beginPath();
           ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
           ctx.fill();
+        } else if (p.type === 'splinter') {
+          ctx.save();
+          ctx.translate(p.x, p.y);
+          ctx.rotate(p.rot);
+          ctx.fillStyle = p.color;
+          ctx.beginPath();
+          ctx.roundRect(-p.length / 2, -p.width / 2, p.length, p.width, 1);
+          ctx.fill();
+          ctx.restore();
         }
       }
 
@@ -1367,6 +1656,7 @@
       this.resumeBtn = document.getElementById('resumeBtn');
       this.touchJumpBtn = document.getElementById('touchJumpBtn');
       this.touchDuckBtn = document.getElementById('touchDuckBtn');
+      this.shieldBadge = document.getElementById('shieldBadge');
 
       this.sound = new SoundController();
       this.panda = new Panda();
@@ -1385,9 +1675,16 @@
 
       this.updateHiScoreDisplay();
       this.updateSoundButton();
+      this.updateShieldBadge();
       this.bindEvents();
 
       this.render();
+    }
+
+    updateShieldBadge() {
+      if (this.shieldBadge) {
+        this.shieldBadge.style.display = (this.panda && this.panda.hasShield) ? 'flex' : 'none';
+      }
     }
 
     updateHiScoreDisplay() {
@@ -1555,6 +1852,7 @@
       this.obstacles.reset();
       this.particles.reset();
       this.updateScoreDisplay();
+      this.updateShieldBadge();
 
       this.scoreDisplay.classList.remove('score-flash');
       this.newRecordAlert.style.display = 'none';
@@ -1564,6 +1862,7 @@
     gameOver() {
       this.state = 'GAMEOVER';
       this.panda.isHit = true;
+      this.updateShieldBadge();
       this.sound.playHit();
 
       const finalVal = Math.floor(this.score);
@@ -1617,7 +1916,7 @@
       }
 
       this.env.update(this.speed, this.score);
-      this.panda.update(this.particles);
+      this.panda.update(dt, this.particles);
       this.obstacles.update(
         this.speed,
         this.score,
@@ -1628,11 +1927,20 @@
           this.distance += bonusPoints * 10;
           this.score += bonusPoints;
           this.updateScoreDisplay();
+        },
+        () => {
+          this.updateShieldBadge();
         }
       );
       this.particles.update();
 
-      if (this.obstacles.checkCollisions(this.panda)) {
+      if (this.obstacles.checkCollisions(this.panda, () => {
+        this.sound.playShieldBreak();
+        this.particles.createShieldBreak(this.panda.x + 22, this.panda.y - 26);
+        this.particles.createFloatingText('ЩИТ ЗЛАМАНО!', this.panda.x + 20, this.panda.y - 45, '#2ecc71');
+        this.panda.breakShield();
+        this.updateShieldBadge();
+      })) {
         this.gameOver();
       }
     }

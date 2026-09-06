@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="uk">
 <head>
   <meta charset="UTF-8">
@@ -19,6 +19,10 @@
       </div>
       
       <div class="hud-bar">
+        <div class="shield-badge" id="shieldBadge" style="display: none;">
+          <span class="shield-badge-icon">🛡️</span>
+          <span class="shield-badge-text">ЩИТ</span>
+        </div>
         <div class="score-board">
           <span class="hi-score" id="hiScoreDisplay">HI 00000</span>
           <span class="current-score" id="scoreDisplay">00000</span>
@@ -55,6 +59,10 @@
             <div class="legend-item">
               <span class="key-combo">🎋 Золотий бамбук</span>
               <span>+100 додаткових балів!</span>
+            </div>
+            <div class="legend-item">
+              <span class="key-combo">🛡️ Бамбуковий щит</span>
+              <span>Захист від 1 удару (+1с невразливості)</span>
             </div>
           </div>
           <button id="startGameBtn" class="action-btn">ПОЧАТИ ГРУ</button>
