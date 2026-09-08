@@ -326,6 +326,30 @@
       osc.stop(now + 0.13);
     }
 
+    playMagnetActivate() {
+      if (this.isMuted) return;
+      this.resume();
+      if (!this.ctx) return;
+
+      const now = this.ctx.currentTime;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(200, now);
+      osc.frequency.exponentialRampToValueAtTime(800, now + 0.3);
+
+      gain.gain.setValueAtTime(0, now);
+      gain.gain.linearRampToValueAtTime(0.2, now + 0.1);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+
+      osc.start(now);
+      osc.stop(now + 0.3);
+    }
+
     startBgm() {
       this.initAudio();
       this.resume();
@@ -474,11 +498,19 @@
       this.hasShield = false;
       this.invulnerableTimer = 0;
       this.shieldAnimTick = 0;
+
+      this.hasMagnet = false;
+      this.magnetTimer = 0;
     }
 
     activateShield() {
       this.hasShield = true;
       this.shieldAnimTick = 0;
+    }
+
+    activateMagnet() {
+      this.hasMagnet = true;
+      this.magnetTimer = 10.0;
     }
 
     breakShield() {
@@ -544,6 +576,13 @@
 
       if (this.invulnerableTimer > 0) {
         this.invulnerableTimer = Math.max(0, this.invulnerableTimer - deltaTime);
+      }
+
+      if (this.hasMagnet) {
+        this.magnetTimer = Math.max(0, this.magnetTimer - deltaTime);
+        if (this.magnetTimer <= 0) {
+          this.hasMagnet = false;
+        }
       }
 
       if (this.hasShield) {
@@ -616,6 +655,29 @@
       if (this.hasShield && !this.isHit) {
         this.drawShield(ctx);
       }
+
+      // Magnetic aura
+      if (this.hasMagnet && !this.isHit) {
+        this.drawMagnetEffect(ctx);
+      }
+    }
+
+    drawMagnetEffect(ctx) {
+      ctx.save();
+      const cx = this.isDucking ? this.x + 28 : this.x + 22;
+      const cy = this.isDucking ? this.y - 14 : this.y - 26;
+      const pulse = Math.sin(this.animTick * 0.15) * 5;
+      const r = 45 + pulse;
+
+      ctx.shadowColor = '#9b59b6';
+      ctx.shadowBlur = 15;
+      ctx.strokeStyle = 'rgba(155, 89, 182, 0.6)';
+      ctx.lineWidth = 3;
+      ctx.setLineDash([5, 5]);
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
     }
 
     drawShield(ctx) {
@@ -1004,7 +1066,7 @@
       this.distSinceLast = 0;
     }
 
-    update(speed, score, sound, panda, particleSystem, onBonusPickup, onShieldPickup) {
+    update(speed, score, sound, panda, particleSystem, onBonusPickup, onShieldPickup, onMagnetPickup) {
       for (let i = this.obstacles.length - 1; i >= 0; i--) {
         const obs = this.obstacles[i];
         obs.x -= speed;
@@ -1017,6 +1079,18 @@
 
       for (let i = this.collectibles.length - 1; i >= 0; i--) {
         const col = this.collectibles[i];
+
+        if (col.type === 'bamboo' && panda.hasMagnet) {
+          const dx = (panda.x + panda.width / 2) - col.x;
+          const dy = (panda.y - panda.height / 2) - col.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < 300) {
+            const pullStrength = 4.0;
+            col.x += (dx / dist) * pullStrength;
+            col.y += (dy / dist) * pullStrength;
+          }
+        }
+
         col.x -= speed;
         col.animTick = (col.animTick || 0) + 1;
 
@@ -1028,6 +1102,12 @@
             particleSystem.createFloatingText('🛡️ ЩИТ!', col.x + 10, col.y - 20, '#2ecc71');
             panda.activateShield();
             if (onShieldPickup) onShieldPickup();
+          } else if (col.type === 'magnet') {
+            sound.playMagnetActivate();
+            particleSystem.createSparkles(col.x + 14, col.y - 10, 16, '#9b59b6');
+            particleSystem.createFloatingText('🧲 МАГНІТ!', col.x + 10, col.y - 20, '#9b59b6');
+            panda.activateMagnet();
+            if (onMagnetPickup) onMagnetPickup();
           } else {
             sound.playBonus();
             particleSystem.createSparkles(col.x + 15, col.y - 10, 12);
@@ -1125,9 +1205,22 @@
 
     spawnCollectible(panda) {
       const hoverY = Math.random() < 0.5 ? GROUND_Y - 40 : GROUND_Y - 80;
-      const spawnShield = (!panda || !panda.hasShield) && Math.random() < 0.35;
+
+      let type = 'bamboo';
+      if (!panda) {
+        if (Math.random() < 0.2) type = 'shield';
+        else if (Math.random() < 0.1) type = 'magnet';
+      } else {
+        const rand = Math.random();
+        if (!panda.hasShield && rand < 0.3) {
+          type = 'shield';
+        } else if (!panda.hasMagnet && rand < 0.45) {
+          type = 'magnet';
+        }
+      }
+
       this.collectibles.push({
-        type: spawnShield ? 'shield' : 'bamboo',
+        type: type,
         x: CANVAS_WIDTH + 140,
         y: hoverY,
         width: 28,
@@ -1172,6 +1265,8 @@
       for (const col of this.collectibles) {
         if (col.type === 'shield') {
           this.drawShieldCollectible(ctx, col);
+        } else if (col.type === 'magnet') {
+          this.drawMagnetCollectible(ctx, col);
         } else {
           this.drawCollectible(ctx, col);
         }
@@ -1405,6 +1500,47 @@
       ctx.ellipse(8, -14, 5, 2, -0.5, 0, Math.PI * 2);
       ctx.ellipse(20, -8, 5, 2, 0.5, 0, Math.PI * 2);
       ctx.fill();
+
+      ctx.restore();
+    }
+
+    drawMagnetCollectible(ctx, col) {
+      ctx.save();
+      const floatY = Math.sin(col.animTick * 0.1) * 4;
+      ctx.translate(col.x, col.y + floatY);
+
+      ctx.shadowColor = 'rgba(155, 89, 182, 0.8)';
+      ctx.shadowBlur = 14;
+
+      // Magnet U-shape
+      ctx.fillStyle = '#8e44ad';
+      ctx.strokeStyle = '#d2b4de';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(6, -24);
+      ctx.lineTo(6, -8);
+      ctx.quadraticCurveTo(6, 2, 14, 2);
+      ctx.lineTo(14, -8);
+      ctx.lineTo(14, -24);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // Magnet tips
+      ctx.fillStyle = '#c0392b';
+      ctx.beginPath();
+      ctx.arc(6, -24, 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#2980b9';
+      ctx.beginPath();
+      ctx.arc(14, -24, 3, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Decorative rings
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+      ctx.beginPath();
+      ctx.ellipse(10, -12, 12, 4, 0, 0, Math.PI * 2);
+      ctx.stroke();
 
       ctx.restore();
     }
@@ -2090,6 +2226,9 @@
         },
         () => {
           this.updateShieldBadge();
+        },
+        () => {
+          // Magnet badge could be updated here if added to HUD
         }
       );
       this.particles.update();

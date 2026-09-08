@@ -267,15 +267,16 @@ body {
 
 .legend-item {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  gap: 10px;
+  gap: 15px;
 }
 
 .key-combo {
   font-weight: bold;
   color: #7bed9f;
   white-space: nowrap;
+  min-width: 200px;
+  flex-shrink: 0;
 }
 
 kbd {
