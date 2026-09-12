@@ -86,6 +86,26 @@ body {
   animation: pulseShieldBadge 1.5s infinite ease-in-out;
 }
 
+.eating-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(52, 152, 219, 0.2);
+  border: 1.5px solid #3498db;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-family: var(--font-retro);
+  font-size: 0.75rem;
+  color: #85c1e9;
+  box-shadow: 0 0 12px rgba(52, 152, 219, 0.4);
+  animation: pulseEating 0.5s infinite ease-in-out;
+}
+
+@keyframes pulseEating {
+  0%, 100% { box-shadow: 0 0 8px rgba(52, 152, 219, 0.3); }
+  50% { box-shadow: 0 0 16px rgba(52, 152, 219, 0.7); }
+}
+
 .shield-badge-icon {
   font-size: 0.95rem;
 }

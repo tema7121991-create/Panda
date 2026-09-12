@@ -326,6 +326,48 @@
       osc.stop(now + 0.13);
     }
 
+    playPowerUp() {
+      if (this.isMuted) return;
+      this.resume();
+      if (!this.ctx) return;
+      const now = this.ctx.currentTime;
+      // Rising chime (Pac-Man power pellet)
+      const freqs = [262, 330, 392, 523];
+      freqs.forEach((freq, idx) => {
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        const t = now + idx * 0.07;
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(freq, t);
+        osc.frequency.exponentialRampToValueAtTime(freq * 1.5, t + 0.15);
+        gain.gain.setValueAtTime(0.12, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(t);
+        osc.stop(t + 0.23);
+      });
+    }
+
+    playEat() {
+      if (this.isMuted) return;
+      this.resume();
+      if (!this.ctx) return;
+      const now = this.ctx.currentTime;
+      // Quick chomp (descending square)
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(500, now);
+      osc.frequency.exponentialRampToValueAtTime(120, now + 0.08);
+      gain.gain.setValueAtTime(0.15, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.1);
+    }
+
     startBgm() {
       this.initAudio();
       this.resume();
@@ -475,6 +517,10 @@
       this.hasShield = false;
       this.invulnerableTimer = 0;
       this.shieldAnimTick = 0;
+
+      // Eating mode (Pac-Man power-up)
+      this.eatingMode = false;
+      this.eatingTimer = 0;
 
       // Initialize skin-specific properties
       this.updateSkinColors();
@@ -1048,6 +1094,12 @@
             particleSystem.createFloatingText('🛡️ ЩИТ!', col.x + 10, col.y - 20, '#2ecc71');
             panda.activateShield();
             if (onShieldPickup) onShieldPickup();
+          } else if (col.type === 'power-pellet') {
+            sound.playPowerUp();
+            particleSystem.createSparkles(col.x + 14, col.y - 10, 18, '#3498db');
+            particleSystem.createFloatingText('👻 ЇДИ!', col.x + 10, col.y - 20, '#3498db');
+            panda.eatingMode = true;
+            panda.eatingTimer = 8;
           } else if (col.type === 'coin') {
             sound.playBonus();
             particleSystem.createSparkles(col.x + 15, col.y - 10, 14, '#f39c12');
@@ -1152,9 +1204,10 @@
 
     spawnCollectible(panda) {
       const hoverY = Math.random() < 0.5 ? GROUND_Y - 40 : GROUND_Y - 80;
-      const spawnShield = (!panda || !panda.hasShield) && Math.random() < 0.35;
-      const spawnCoin = Math.random() < 0.25;
-      const type = spawnShield ? 'shield' : (spawnCoin ? 'coin' : 'bamboo');
+      const spawnPowerPellet = Math.random() < 0.12;
+      const spawnShield = (!panda || !panda.hasShield) && Math.random() < 0.3;
+      const spawnCoin = Math.random() < 0.22;
+      const type = spawnPowerPellet ? 'power-pellet' : (spawnShield ? 'shield' : (spawnCoin ? 'coin' : 'bamboo'));
       this.collectibles.push({
         type,
         x: CANVAS_WIDTH + 140,
@@ -1177,7 +1230,7 @@
       );
     }
 
-    checkCollisions(panda, onShieldBreak) {
+    checkCollisions(panda, onShieldBreak, onCraneEaten) {
       if (panda.invulnerableTimer > 0) {
         return false;
       }
@@ -1191,16 +1244,23 @@
             if (onShieldBreak) onShieldBreak();
             return false;
           }
+          if (panda.eatingMode && obs.type === 'crane') {
+            this.obstacles.splice(i, 1);
+            if (onCraneEaten) onCraneEaten(obs.x, obs.y);
+            return false;
+          }
           return true;
         }
       }
       return false;
     }
 
-    draw(ctx) {
+    draw(ctx, panda) {
       for (const col of this.collectibles) {
         if (col.type === 'shield') {
           this.drawShieldCollectible(ctx, col);
+        } else if (col.type === 'power-pellet') {
+          this.drawPowerPellet(ctx, col);
         } else {
           this.drawCollectible(ctx, col);
         }
@@ -1216,7 +1276,8 @@
         } else if (obs.type === 'rock') {
           this.drawRock(ctx, obs.x, obs.y);
         } else if (obs.type === 'crane') {
-          this.drawCrane(ctx, obs.x, obs.y, obs.animTick);
+          const eating = panda && panda.eatingMode;
+          this.drawCrane(ctx, obs.x, obs.y, obs.animTick, eating);
         }
       }
     }
@@ -1285,18 +1346,22 @@
       ctx.restore();
     }
 
-    drawCrane(ctx, x, y, tick) {
+    drawCrane(ctx, x, y, tick, eating) {
       ctx.save();
       ctx.translate(x, y);
 
       const wingCycle = Math.sin(tick * 0.25);
+      const bodyColor = eating ? '#3498db' : '#f8f9fa';
+      const darkColor = eating ? '#1a5276' : '#2c3e50';
+      const accentColor = eating ? '#e74c3c' : '#e74c3c';
+      const beakColor = eating ? '#e67e22' : '#f39c12';
 
-      ctx.fillStyle = '#f8f9fa';
+      ctx.fillStyle = bodyColor;
       ctx.beginPath();
       ctx.ellipse(20, -8, 16, 8, -0.1, 0, Math.PI * 2);
       ctx.fill();
 
-      ctx.fillStyle = '#2c3e50';
+      ctx.fillStyle = darkColor;
       ctx.beginPath();
       ctx.moveTo(4, -8);
       ctx.lineTo(-4, -12);
@@ -1304,19 +1369,19 @@
       ctx.closePath();
       ctx.fill();
 
-      ctx.strokeStyle = '#f8f9fa';
+      ctx.strokeStyle = bodyColor;
       ctx.lineWidth = 4;
       ctx.beginPath();
       ctx.moveTo(32, -8);
       ctx.quadraticCurveTo(38, -14, 40, -18);
       ctx.stroke();
 
-      ctx.fillStyle = '#e74c3c';
+      ctx.fillStyle = accentColor;
       ctx.beginPath();
       ctx.arc(40, -19, 2.5, 0, Math.PI * 2);
       ctx.fill();
 
-      ctx.fillStyle = '#f39c12';
+      ctx.fillStyle = beakColor;
       ctx.beginPath();
       ctx.moveTo(42, -18);
       ctx.lineTo(50, -17);
@@ -1325,7 +1390,7 @@
       ctx.fill();
 
       ctx.fillStyle = '#ecf0f1';
-      ctx.strokeStyle = '#2c3e50';
+      ctx.strokeStyle = darkColor;
       ctx.lineWidth = 1.5;
       ctx.beginPath();
       if (wingCycle > 0) {
@@ -1340,6 +1405,38 @@
       ctx.closePath();
       ctx.fill();
       ctx.stroke();
+
+      ctx.restore();
+    }
+
+    drawPowerPellet(ctx, col) {
+      ctx.save();
+      const floatY = Math.sin(col.animTick * 0.15) * 6;
+      const x = col.x + 14;
+      const y = col.y + floatY - 16;
+
+      // Outer glow
+      ctx.shadowColor = 'rgba(52, 152, 219, 0.8)';
+      ctx.shadowBlur = 18;
+
+      // Main orb
+      ctx.fillStyle = '#3498db';
+      ctx.beginPath();
+      ctx.arc(x, y, 10, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Inner bright core
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = '#85c1e9';
+      ctx.beginPath();
+      ctx.arc(x, y, 5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Small sparkle
+      ctx.fillStyle = '#ecf0f1';
+      ctx.beginPath();
+      ctx.arc(x - 2, y - 3, 2, 0, Math.PI * 2);
+      ctx.fill();
 
       ctx.restore();
     }
@@ -1842,6 +1939,8 @@
       this.touchJumpBtn = document.getElementById('touchJumpBtn');
       this.touchDuckBtn = document.getElementById('touchDuckBtn');
       this.shieldBadge = document.getElementById('shieldBadge');
+      this.eatingBadge = document.getElementById('eatingBadge');
+      this.eatingTimerEl = document.getElementById('eatingTimer');
       this.shopBtn = document.getElementById('shopBtn');
       this.shopOverlay = document.getElementById('shopOverlay');
       this.closeShopBtn = document.getElementById('closeShopBtn');
@@ -1880,6 +1979,7 @@
       this.updateHiScoreDisplay();
       this.updateSoundButton();
       this.updateShieldBadge();
+      this.updateEatingBadge();
       this.updateSkinPointsDisplay();
       this.bindEvents();
 
@@ -1889,6 +1989,17 @@
     updateShieldBadge() {
       if (this.shieldBadge) {
         this.shieldBadge.style.display = (this.panda && this.panda.hasShield) ? 'flex' : 'none';
+      }
+    }
+
+    updateEatingBadge() {
+      if (this.eatingBadge) {
+        this.eatingBadge.style.display = (this.panda && this.panda.eatingMode) ? 'flex' : 'none';
+      }
+      if (this.eatingTimerEl) {
+        if (this.panda && this.panda.eatingMode) {
+          this.eatingTimerEl.textContent = Math.ceil(this.panda.eatingTimer) + 'с';
+        }
       }
     }
 
@@ -2307,12 +2418,29 @@
       );
       this.particles.update();
 
+      // Eating timer
+      if (this.panda.eatingMode) {
+        this.panda.eatingTimer -= dt;
+        if (this.panda.eatingTimer <= 0) {
+          this.panda.eatingMode = false;
+          this.panda.eatingTimer = 0;
+        }
+      }
+      this.updateEatingBadge();
+
       if (this.obstacles.checkCollisions(this.panda, () => {
         this.sound.playShieldBreak();
         this.particles.createShieldBreak(this.panda.x + 22, this.panda.y - 26);
         this.particles.createFloatingText('ЩИТ ЗЛАМАНО!', this.panda.x + 20, this.panda.y - 45, '#2ecc71');
         this.panda.breakShield();
         this.updateShieldBadge();
+      }, (x, y) => {
+        this.sound.playEat();
+        this.particles.createSparkles(x + 20, y - 10, 14, '#e74c3c');
+        this.particles.createFloatingText('👻 +100', x + 10, y - 25, '#e74c3c');
+        this.distance += 100;
+        this.score += 100;
+        this.updateScoreDisplay();
       })) {
         this.gameOver();
       }
@@ -2322,7 +2450,7 @@
       this.ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
       this.env.draw(this.ctx, this.score);
-      this.obstacles.draw(this.ctx);
+      this.obstacles.draw(this.ctx, this.panda);
       this.panda.draw(this.ctx);
       this.particles.draw(this.ctx);
     }
