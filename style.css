@@ -146,6 +146,42 @@ body {
   gap: 8px;
 }
 
+.coins-display {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-retro);
+  font-size: 0.9rem;
+  color: #f39c12;
+  background: rgba(241, 196, 15, 0.2);
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid #f1c40f;
+}
+
+.coins-display #coinsCount {
+  font-weight: bold;
+  color: #f1c40f;
+}
+
+.skinpoints-display {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-retro);
+  font-size: 0.9rem;
+  color: #e056fd;
+  background: rgba(224, 86, 253, 0.2);
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid #e056fd;
+}
+
+.skinpoints-display #skinPointsCount {
+  font-weight: bold;
+  color: #e056fd;
+}
+
 .hud-btn {
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.18);
@@ -204,6 +240,7 @@ body {
   pointer-events: none;
   transition: opacity 0.25s ease;
   z-index: 10;
+  overflow-y: auto;
 }
 
 .overlay.active {
@@ -218,6 +255,9 @@ body {
   padding: 24px 32px;
   max-width: 540px;
   width: 100%;
+  flex-shrink: 0;
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
   text-align: center;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), inset 0 0 15px rgba(46, 204, 113, 0.1);
   animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
@@ -363,6 +403,142 @@ kbd {
 @keyframes bounceRecord {
   from { transform: scale(0.95); }
   to { transform: scale(1.08); }
+}
+
+/* Shop Overlay Styles */
+.shop-card {
+  text-align: left;
+  max-width: 500px;
+}
+
+.shop-card .skin-list {
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin: 14px 0;
+}
+
+.shop-card .skin-card {
+  padding: 12px;
+}
+
+.shop-card .skin-preview {
+  font-size: 2rem;
+  margin-bottom: 4px;
+}
+
+.shop-card .skin-name {
+  font-size: 0.8rem;
+  margin-bottom: 4px;
+}
+
+.shop-card .skin-cost {
+  font-size: 0.8rem;
+}
+
+.shop-coins {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 16px 0;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 10px;
+  border: 1px solid var(--accent-green);
+  font-family: var(--font-retro);
+  font-size: 1rem;
+}
+
+.shop-coins span {
+  font-weight: bold;
+  color: #f1c40f;
+}
+
+.shop-hint {
+  font-size: 0.8rem;
+  color: #e056fd;
+  margin: -8px 0 12px;
+  font-family: var(--font-retro);
+}
+
+.shop-error {
+  font-size: 0.85rem;
+  color: #ff6b6b;
+  margin: 4px 0 12px;
+  font-family: var(--font-retro);
+  min-height: 1.2em;
+}
+
+.skin-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 16px;
+  margin: 20px 0;
+}
+
+.skin-card {
+  background: rgba(0, 0, 0, 0.35);
+  border: 2px solid var(--accent-green);
+  border-radius: 12px;
+  padding: 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.skin-card:hover {
+  background: rgba(46, 204, 113, 0.15);
+  transform: translateY(-2px);
+  border-color: #2ecc71;
+}
+
+.skin-card.selected {
+  background: rgba(46, 204, 113, 0.25);
+  border-color: #27ae60;
+  transform: scale(1.05);
+}
+
+.skin-card.error {
+  border-color: #ff6b6b !important;
+  animation: shakeCard 0.4s ease;
+}
+
+@keyframes shakeCard {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+
+.skin-preview {
+  font-size: 2.5rem;
+  margin-bottom: 8px;
+  display: block;
+}
+
+.skin-name {
+  font-family: var(--font-retro);
+  font-size: 0.95rem;
+  color: var(--text-main);
+  margin-bottom: 8px;
+}
+
+.skin-cost {
+  font-family: var(--font-retro);
+  font-size: 0.9rem;
+  font-weight: bold;
+  color: var(--bamboo-gold);
+}
+
+/* Specific skin preview colors */
+.red-panda-preview {
+  color: #c25e3a;
+}
+
+.kung-fu-preview {
+  color: #c0392b;
+}
+
+.cyber-preview {
+  color: #00ff41;
 }
 
 .restart-btn {
