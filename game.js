@@ -448,6 +448,7 @@
   class Panda {
     constructor() {
       this.reset();
+      this.currentSkin = 'default';
     }
 
     reset() {
@@ -474,6 +475,24 @@
       this.hasShield = false;
       this.invulnerableTimer = 0;
       this.shieldAnimTick = 0;
+
+      // Initialize skin-specific properties
+      this.updateSkinColors();
+    }
+
+    updateSkinColors() {
+      const currentSkin = window.pandaGame ? window.pandaGame.currentSkin : 'default';
+      this.skinColors = {
+        default: { body: '#ffffff', saddle: '#181818', belly: '#ffffff', ears: '#151515', accents: '#2ecc71' },
+        'red-panda': { body: '#c25e3a', saddle: '#1a1a1a', belly: '#ff8a65', ears: '#722f0a', accents: '#d84315' },
+        'kung-fu': { body: '#c0392b', saddle: '#222222', belly: '#ff5722', ears: '#4a0e05', accents: '#ff3d00' },
+        'cyber': { body: '#00ff41', saddle: '#001a00', belly: '#00e600', ears: '#003d0a', accents: '#0bff0b' }
+      }[currentSkin] || this.skinColors;
+    }
+
+    applySkin(skinName) {
+      this.currentSkin = skinName;
+      this.updateSkinColors();
     }
 
     activateShield() {
@@ -693,19 +712,19 @@
       ctx.fill();
 
       // Body
-      ctx.fillStyle = '#ffffff';
+      ctx.fillStyle = this.skinColors.body;
       ctx.beginPath();
       ctx.ellipse(20, -22, 18, 16, 0, 0, Math.PI * 2);
       ctx.fill();
 
-      // Black shoulder saddle
-      ctx.fillStyle = '#181818';
+      // Shoulder saddle
+      ctx.fillStyle = this.skinColors.saddle;
       ctx.beginPath();
       ctx.ellipse(23, -24, 11, 15, 0.2, 0, Math.PI * 2);
       ctx.fill();
 
-      // White belly overlay
-      ctx.fillStyle = '#ffffff';
+      // Belly overlay
+      ctx.fillStyle = this.skinColors.belly;
       ctx.beginPath();
       ctx.ellipse(15, -20, 11, 13, -0.1, 0, Math.PI * 2);
       ctx.fill();
@@ -733,19 +752,19 @@
       ctx.fill();
 
       // Body
-      ctx.fillStyle = '#ffffff';
+      ctx.fillStyle = this.skinColors.body;
       ctx.beginPath();
       ctx.ellipse(20, -24, 18, 16, 0.1, 0, Math.PI * 2);
       ctx.fill();
 
-      // Black saddle
-      ctx.fillStyle = '#181818';
+      // Saddle
+      ctx.fillStyle = this.skinColors.saddle;
       ctx.beginPath();
       ctx.ellipse(23, -25, 11, 15, 0.2, 0, Math.PI * 2);
       ctx.fill();
 
-      // White belly
-      ctx.fillStyle = '#ffffff';
+      // Belly
+      ctx.fillStyle = this.skinColors.belly;
       ctx.beginPath();
       ctx.ellipse(15, -22, 10, 13, -0.1, 0, Math.PI * 2);
       ctx.fill();
@@ -770,19 +789,19 @@
       this.rollAngle += 0.25;
 
       // Compact body
-      ctx.fillStyle = '#ffffff';
+      ctx.fillStyle = this.skinColors.body;
       ctx.beginPath();
       ctx.ellipse(0, 0, 24, 14, 0, 0, Math.PI * 2);
       ctx.fill();
 
-      // Black saddle band
-      ctx.fillStyle = '#181818';
+      // Saddle band
+      ctx.fillStyle = this.skinColors.saddle;
       ctx.beginPath();
       ctx.ellipse(3, 0, 14, 14, 0, 0, Math.PI * 2);
       ctx.fill();
 
-      // White inner belly
-      ctx.fillStyle = '#ffffff';
+      // Inner belly
+      ctx.fillStyle = this.skinColors.belly;
       ctx.beginPath();
       ctx.ellipse(-6, 1, 13, 11, 0, 0, Math.PI * 2);
       ctx.fill();
@@ -825,22 +844,22 @@
       ctx.arc(-2, -10, 5, 0, Math.PI * 2);
       ctx.fill();
 
-      ctx.fillStyle = '#ffffff';
+      ctx.fillStyle = this.skinColors.body;
       ctx.beginPath();
       ctx.ellipse(18, -16, 18, 16, -0.2, 0, Math.PI * 2);
       ctx.fill();
 
-      ctx.fillStyle = '#181818';
+      ctx.fillStyle = this.skinColors.saddle;
       ctx.beginPath();
       ctx.ellipse(20, -18, 10, 14, -0.1, 0, Math.PI * 2);
       ctx.fill();
 
-      ctx.fillStyle = '#ffffff';
+      ctx.fillStyle = this.skinColors.belly;
       ctx.beginPath();
       ctx.ellipse(14, -15, 11, 12, -0.2, 0, Math.PI * 2);
       ctx.fill();
 
-      ctx.fillStyle = '#181818';
+      ctx.fillStyle = this.skinColors.saddle;
       ctx.beginPath();
       ctx.ellipse(4, -4, 9, 5, -0.3, 0, Math.PI * 2);
       ctx.ellipse(28, -6, 9, 5, 0.4, 0, Math.PI * 2);
@@ -849,7 +868,7 @@
       const hx = 24;
       const hy = -32;
 
-      ctx.fillStyle = '#111';
+      ctx.fillStyle = this.skinColors.ears;
       ctx.beginPath();
       ctx.arc(hx - 10, hy - 7, 5, 0, Math.PI * 2);
       ctx.arc(hx + 8, hy - 11, 5, 0, Math.PI * 2);
@@ -860,7 +879,7 @@
       ctx.arc(hx, hy, 14, 0, Math.PI * 2);
       ctx.fill();
 
-      ctx.fillStyle = '#181818';
+      ctx.fillStyle = this.skinColors.saddle;
       ctx.beginPath();
       ctx.ellipse(hx + 4, hy - 1, 5, 4, 0.2, 0, Math.PI * 2);
       ctx.ellipse(hx - 5, hy - 1, 4.5, 4, -0.2, 0, Math.PI * 2);
@@ -908,27 +927,28 @@
       ctx.translate(hx, hy);
       ctx.rotate(tilt);
 
-      // Black fluffy ears
-      ctx.fillStyle = '#151515';
+      // Fluffy ears
+      ctx.fillStyle = this.skinColors.ears;
       ctx.beginPath();
       ctx.arc(-8, -12, 5.5, 0, Math.PI * 2);
       ctx.arc(9, -12, 5.5, 0, Math.PI * 2);
       ctx.fill();
 
-      ctx.fillStyle = '#e8a598';
+      // Ear inner accent
+      ctx.fillStyle = this.skinColors.accents;
       ctx.beginPath();
       ctx.arc(-8, -12, 2.5, 0, Math.PI * 2);
       ctx.arc(9, -12, 2.5, 0, Math.PI * 2);
       ctx.fill();
 
-      // White fluffy head
-      ctx.fillStyle = '#ffffff';
+      // Fluffy head
+      ctx.fillStyle = this.skinColors.body;
       ctx.beginPath();
       ctx.arc(0, 0, 14, 0, Math.PI * 2);
       ctx.fill();
 
-      // Black eye patches
-      ctx.fillStyle = '#181818';
+      // Eye patches
+      ctx.fillStyle = this.skinColors.saddle;
       ctx.beginPath();
       ctx.ellipse(-5, -2, 4.5, 5.5, -0.3, 0, Math.PI * 2);
       ctx.fill();
@@ -1028,6 +1048,13 @@
             particleSystem.createFloatingText('🛡️ ЩИТ!', col.x + 10, col.y - 20, '#2ecc71');
             panda.activateShield();
             if (onShieldPickup) onShieldPickup();
+          } else if (col.type === 'coin') {
+            sound.playBonus();
+            particleSystem.createSparkles(col.x + 15, col.y - 10, 14, '#f39c12');
+            particleSystem.createFloatingText('🪙 +1', col.x + 10, col.y - 20, '#f39c12');
+            const currentCoins = parseInt(localStorage.getItem('panda_runner_coins') || '0', 10);
+            localStorage.setItem('panda_runner_coins', (currentCoins + 1).toString());
+            if (onBonusPickup) onBonusPickup(100);
           } else {
             sound.playBonus();
             particleSystem.createSparkles(col.x + 15, col.y - 10, 12);
@@ -1126,8 +1153,10 @@
     spawnCollectible(panda) {
       const hoverY = Math.random() < 0.5 ? GROUND_Y - 40 : GROUND_Y - 80;
       const spawnShield = (!panda || !panda.hasShield) && Math.random() < 0.35;
+      const spawnCoin = Math.random() < 0.25;
+      const type = spawnShield ? 'shield' : (spawnCoin ? 'coin' : 'bamboo');
       this.collectibles.push({
-        type: spawnShield ? 'shield' : 'bamboo',
+        type,
         x: CANVAS_WIDTH + 140,
         y: hoverY,
         width: 28,
@@ -1808,10 +1837,20 @@
       this.pauseIcon = document.getElementById('pauseIcon');
       this.startGameBtn = document.getElementById('startGameBtn');
       this.restartBtn = document.getElementById('restartBtn');
+      this.menuBtn = document.getElementById('menuBtn');
       this.resumeBtn = document.getElementById('resumeBtn');
       this.touchJumpBtn = document.getElementById('touchJumpBtn');
       this.touchDuckBtn = document.getElementById('touchDuckBtn');
       this.shieldBadge = document.getElementById('shieldBadge');
+      this.shopBtn = document.getElementById('shopBtn');
+      this.shopOverlay = document.getElementById('shopOverlay');
+      this.closeShopBtn = document.getElementById('closeShopBtn');
+      this.coinsCount = document.getElementById('coinsCount');
+      this.shopCoins = document.getElementById('shopCoins');
+      this.skinPointsDisplay = document.getElementById('skinPointsCount');
+      this.shopSkinPoints = document.getElementById('shopSkinPoints');
+      this.skinCards = document.querySelectorAll('.skin-card');
+      this.shopError = document.getElementById('shopError');
 
       this.sound = new SoundController();
       this.panda = new Panda();
@@ -1819,11 +1858,21 @@
       this.env = new Environment();
       this.particles = new ParticleSystem();
 
+      // Skin System
+      this.skins = {
+        default: { colors: ['#ffffff', '#181818', '#ffeb3b'], offsetX: 0 },
+        'red-panda': { colors: ['#c25e3a', '#1a1a1a', '#ff8a65'], offsetX: -5 },
+        'kung-fu': { colors: ['#c0392b', '#222222', '#ff5722'], offsetX: -3 },
+        'cyber': { colors: ['#00ff41', '#001a00', '#00e600'], offsetX: 0 }
+      };
+      this.currentSkin = localStorage.getItem('panda_runner_skin') || 'default';
+
       this.state = 'START';
       this.score = 0;
       this.distance = 0;
       this.speed = INITIAL_SPEED;
       this.hiScore = parseInt(localStorage.getItem('panda_runner_hi') || '0', 10);
+      this.skinPoints = parseInt(localStorage.getItem('panda_runner_skin_points') || '0', 10);
       this.lastMilestone = 0;
 
       this.keys = {};
@@ -1831,6 +1880,7 @@
       this.updateHiScoreDisplay();
       this.updateSoundButton();
       this.updateShieldBadge();
+      this.updateSkinPointsDisplay();
       this.bindEvents();
 
       this.render();
@@ -1842,6 +1892,131 @@
       }
     }
 
+    updateCoins() {
+      const coins = parseInt(localStorage.getItem('panda_runner_coins') || '0', 10);
+      this.coinsCount.textContent = coins;
+      if (this.shopCoins) {
+        this.shopCoins.textContent = coins;
+      }
+    }
+
+    updateSkinPointsDisplay() {
+      if (this.skinPointsDisplay) {
+        this.skinPointsDisplay.textContent = this.skinPoints;
+      }
+      if (this.shopSkinPoints) {
+        this.shopSkinPoints.textContent = this.skinPoints;
+      }
+    }
+
+    openShop() {
+      this.updateCoins();
+      this.updateSkinPointsDisplay();
+      this.shopOverlay.classList.add('active');
+      this.renderSkinCards();
+    }
+
+    closeShop() {
+      this.shopOverlay.classList.remove('active');
+    }
+
+    renderSkinCards() {
+      this.skinCards.forEach(card => {
+        const skin = card.dataset.skin;
+        const isOwned = localStorage.getItem('panda_runner_skin_' + skin) === 'owned';
+        const isCurrent = skin === this.currentSkin;
+        card.classList.toggle('selected', isCurrent);
+        card.classList.toggle('owned', isOwned);
+        const cost = card.querySelector('.skin-cost');
+        if (isOwned && !isCurrent) {
+          cost.textContent = 'SELECTED';
+          cost.style.color = '#2ecc71';
+        } else if (isCurrent) {
+          cost.textContent = 'CURRENT';
+          cost.style.color = '#f1c40f';
+        } else if (!isOwned) {
+          cost.textContent = 'BUY';
+          cost.style.color = '#f1c40f';
+        } else {
+          cost.textContent = 'OWNED';
+          cost.style.color = '#2ecc71';
+        }
+      });
+    }
+
+    buySkin(skinName) {
+      const costs = {
+        'red-panda': 1,
+        'kung-fu': 2,
+        'cyber': 3
+      };
+      const cost = costs[skinName];
+      if (!cost) {
+        if (skinName === 'default') {
+          this.currentSkin = 'default';
+          localStorage.setItem('panda_runner_skin', 'default');
+          this.panda.applySkin('default');
+          this.updateSkinPointsDisplay();
+          this.renderSkinCards();
+          this.closeShop();
+          this.sound.playClick();
+        }
+        return;
+      }
+
+      const alreadyOwned = localStorage.getItem('panda_runner_skin_' + skinName) === 'owned';
+
+      if (alreadyOwned && skinName === this.currentSkin) {
+        this.showShopError('Вже активний!');
+        return;
+      }
+
+      if (alreadyOwned) {
+        this.currentSkin = skinName;
+        localStorage.setItem('panda_runner_skin', skinName);
+        this.panda.applySkin(skinName);
+        this.updateSkinPointsDisplay();
+        this.renderSkinCards();
+        this.closeShop();
+        this.sound.playClick();
+        return;
+      }
+
+      if (this.skinPoints < cost) {
+        this.showShopError('Недостатньо SkinPoint!');
+        return;
+      }
+
+      localStorage.setItem('panda_runner_skin_' + skinName, 'owned');
+      this.skinPoints -= cost;
+      localStorage.setItem('panda_runner_skin_points', this.skinPoints.toString());
+      this.currentSkin = skinName;
+      localStorage.setItem('panda_runner_skin', skinName);
+      this.panda.applySkin(skinName);
+      this.updateSkinPointsDisplay();
+      this.renderSkinCards();
+      this.closeShop();
+      this.sound.playClick();
+    }
+
+    showShopError(message) {
+      if (this.shopError) {
+        this.shopError.textContent = message;
+        clearTimeout(this._shopErrorTimer);
+        this._shopErrorTimer = setTimeout(() => {
+          this.shopError.textContent = '';
+        }, 2000);
+      }
+      const card = document.querySelector('.skin-card.selected');
+      if (card) {
+        card.classList.add('error');
+        setTimeout(() => {
+          card.classList.remove('error');
+        }, 2000);
+      }
+    }
+
+    
     updateHiScoreDisplay() {
       const padded = String(this.hiScore).padStart(5, '0');
       this.hiScoreDisplay.textContent = `HI ${padded}`;
@@ -1907,6 +2082,11 @@
         this.restart();
       });
 
+      this.menuBtn.addEventListener('click', () => {
+        this.sound.playClick();
+        this.goToStart();
+      });
+
       this.resumeBtn.addEventListener('click', () => {
         this.sound.playClick();
         this.togglePause();
@@ -1918,6 +2098,21 @@
 
       this.pauseBtn.addEventListener('click', () => {
         this.togglePause();
+      });
+
+      this.shopBtn.addEventListener('click', () => {
+        this.openShop();
+      });
+
+      this.closeShopBtn.addEventListener('click', () => {
+        this.closeShop();
+      });
+
+      this.skinCards.forEach(card => {
+        card.addEventListener('click', () => {
+          const skin = card.dataset.skin;
+          this.buySkin(skin);
+        });
       });
 
       this.touchJumpBtn.addEventListener('pointerdown', (e) => {
@@ -2017,6 +2212,16 @@
       this.start();
     }
 
+    goToStart() {
+      this.state = 'START';
+      this.gameOverOverlay.classList.remove('active');
+      this.shopOverlay.classList.remove('active');
+      this.pauseOverlay.classList.remove('active');
+      this.startOverlay.classList.add('active');
+      this.updateHiScoreDisplay();
+      this.updateSkinPointsDisplay();
+    }
+
     gameOver() {
       this.state = 'GAMEOVER';
       this.panda.isHit = true;
@@ -2037,6 +2242,14 @@
 
       this.finalHiScore.textContent = this.hiScore;
       this.newRecordAlert.style.display = isNewRecord ? 'block' : 'none';
+
+      // Award SkinPoints: 1 per every 1000 points in this run
+      const earnedSkinPoints = Math.floor(finalVal / 1000);
+      if (earnedSkinPoints > 0) {
+        this.skinPoints += earnedSkinPoints;
+        localStorage.setItem('panda_runner_skin_points', this.skinPoints.toString());
+        this.updateSkinPointsDisplay();
+      }
 
       setTimeout(() => {
         this.gameOverOverlay.classList.add('active');

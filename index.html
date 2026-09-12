@@ -27,7 +27,12 @@
           <span class="hi-score" id="hiScoreDisplay">HI 00000</span>
           <span class="current-score" id="scoreDisplay">00000</span>
         </div>
+        <div class="coins-display" id="coinsDisplay">🪙 <span id="coinsCount">0</span></div>
+        <div class="skinpoints-display" id="skinPointsDisplay">💎 <span id="skinPointsCount">0</span></div>
         <div class="hud-buttons">
+          <button id="shopBtn" class="hud-btn" title="Магазин (S)" aria-label="Магазин">
+            <span id="shopIcon">🛒</span>
+          </button>
           <button id="soundBtn" class="hud-btn" title="Увімкнути/Вимкнути звук (M)" aria-label="Звук">
             <span id="soundIcon">🔊</span>
           </button>
@@ -89,6 +94,42 @@
             <span>🔄 ГРАТИ ЗНОВУ</span>
             <small>(або натисніть <kbd>Пробіл</kbd>)</small>
           </button>
+          <button id="menuBtn" class="action-btn" style="margin-top: 10px; background: linear-gradient(135deg, #3498db, #2980b9); box-shadow: 0 4px 15px rgba(52, 152, 219, 0.4);">
+            <span>🏠 ГОЛОВНЕ МЕНЮ</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Shop Overlay -->
+      <div id="shopOverlay" class="overlay">
+        <div class="overlay-card shop-card">
+          <h2>🛒 МАГАЗИН СКІНІВ</h2>
+          <p class="shop-coins">Ваші SkinPoint: <span id="shopSkinPoints">0</span> 💎</p>
+          <p class="shop-hint">За кожні 1000 балів ви отримуєте 1 SkinPoint</p>
+          <p class="shop-error" id="shopError"></p>
+          <div class="skin-list">
+            <div class="skin-card" data-skin="default">
+              <div class="skin-preview">🐼</div>
+              <div class="skin-name">Класична</div>
+              <div class="skin-cost">БЕЗКОШТОВНО</div>
+            </div>
+            <div class="skin-card" data-skin="red-panda">
+              <div class="skin-preview red-panda-preview">🦊</div>
+              <div class="skin-name">Червона панда</div>
+              <div class="skin-cost">1 💎</div>
+            </div>
+            <div class="skin-card" data-skin="kung-fu">
+              <div class="skin-preview kung-fu-preview">🥋</div>
+              <div class="skin-name">Панда Кунг-фу</div>
+              <div class="skin-cost">2 💎</div>
+            </div>
+            <div class="skin-card" data-skin="cyber">
+              <div class="skin-preview cyber-preview">🤖</div>
+              <div class="skin-name">Кібер-панда</div>
+              <div class="skin-cost">3 💎</div>
+            </div>
+          </div>
+          <button id="closeShopBtn" class="action-btn">ЗАКРИТИ</button>
         </div>
       </div>
 
